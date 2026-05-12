@@ -30,8 +30,14 @@ api.interceptors.response.use(
           { withCredentials: true }
         )
 
-        useAuthStore.getState().setAuth(data.user, data.accessToken)
-        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`
+        const currentUser = useAuthStore.getState().user
+        useAuthStore.getState().setAuth(currentUser!, data.accessToken)
+
+        originalRequest.headers = {
+          ...originalRequest.headers,
+          Authorization: `Bearer ${data.accessToken}`
+        }
+
         return api(originalRequest)
       } catch {
         useAuthStore.getState().clearAuth()
