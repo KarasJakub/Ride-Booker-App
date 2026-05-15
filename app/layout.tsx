@@ -30,7 +30,8 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         {/* Forcing to refresh session for new access token even when refresh token is still valid */}
-        <AuthProvider>{children}</AuthProvider>
+        {/* <AuthProvider>{children}</AuthProvider> */}
+        {children}
       </body>
     </html>
   )

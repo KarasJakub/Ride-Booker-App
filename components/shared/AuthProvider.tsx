@@ -9,9 +9,11 @@ export default function AuthProvider({
 }: {
   children: React.ReactNode
 }) {
-  const { setAuth, clearAuth, accessToken } = useAuthStore()
-
   useEffect(() => {
+    if (sessionStorage.getItem("restore_attempted")) return
+    sessionStorage.setItem("restore_attempted", "true")
+
+    const { accessToken, setAuth } = useAuthStore.getState()
     if (accessToken) return
 
     const restore = async () => {
@@ -19,13 +21,11 @@ export default function AuthProvider({
         const { data } = await api.get("/auth/me")
         setAuth(data.user, data.accessToken)
       } catch {
-        clearAuth()
+        // middleware zadba o redirect
       }
     }
 
     restore()
-    // forcing to refresh session on page load to get new access token if refresh token is still valid (only once)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return <>{children}</>

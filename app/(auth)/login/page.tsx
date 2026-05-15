@@ -42,6 +42,7 @@ export default function LoginPage() {
       const { data } = await api.post("/auth/login", values)
       setAuth(data.user, data.accessToken)
       router.push("/admin/dashboard")
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       form.setError("root", {
         message: "Nieprawidłowy email lub hasło",
