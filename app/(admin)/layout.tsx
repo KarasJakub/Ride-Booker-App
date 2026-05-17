@@ -16,9 +16,14 @@ export default function AdminLayout({
 
     api
       .get("/auth/me")
-      .then(({ data }) => setAuth(data.user, data.accessToken))
+      .then(({ data }) => {
+        const currentToken = useAuthStore.getState().accessToken
+        setAuth(data, currentToken!)
+      })
       .catch(() => {})
-  }, [])
+  }, [setAuth, user])
+
+  console.log("AdminLayout render, user:", user)
 
   return <div>{children}</div>
 }

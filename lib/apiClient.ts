@@ -21,6 +21,12 @@ api.interceptors.response.use(
     const originalRequest = error.config
 
     if (error.response?.status === 401 && !originalRequest._retry) {
+        const isAuthEndpoint = originalRequest.url?.includes('/auth/login') ||
+                         originalRequest.url?.includes('/auth/register')
+
+      if (isAuthEndpoint) {
+        return Promise.reject(error)
+      }
       originalRequest._retry = true
 
       try {
@@ -41,6 +47,7 @@ api.interceptors.response.use(
         return api(originalRequest)
       } catch {
         useAuthStore.getState().clearAuth()
+        document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
         window.location.href = '/login'
       }
     }
