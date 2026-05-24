@@ -32,6 +32,7 @@ import {
 import { toast } from "sonner"
 import { Pencil, Trash2, Plus } from "lucide-react"
 import api from "@/lib/apiClient"
+import VehicleFormDialog from "@/components/admin/VehicleFormDialog"
 
 interface VehicleType {
   id: string
@@ -41,6 +42,7 @@ interface VehicleType {
 interface Vehicle {
   id: string
   name: string
+  typeId: string
   engineCapacity: number
   power: number
   isActive: boolean
@@ -62,6 +64,8 @@ export default function VehiclesPage() {
     id: string
     name: string
   } | null>(null)
+  const [vehicleFormOpen, setVehicleFormOpen] = useState(false)
+  const [editVehicle, setEditVehicle] = useState<Vehicle | null>(null)
 
   // Queries
   const { data: vehicles = [], isLoading: vehiclesLoading } = useQuery({
@@ -164,7 +168,13 @@ export default function VehiclesPage() {
               className="w-38"
               type="number"
             />
-            <Button className="ml-auto">
+            <Button
+              className="ml-auto"
+              onClick={() => {
+                setEditVehicle(null)
+                setVehicleFormOpen(true)
+              }}
+            >
               <Plus className="w-4 h-4 mr-2" />
               Dodaj pojazd
             </Button>
@@ -224,7 +234,14 @@ export default function VehiclesPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setEditVehicle(vehicle)
+                            setVehicleFormOpen(true)
+                          }}
+                        >
                           <Pencil className="w-4 h-4" />
                         </Button>
                         <Button
@@ -335,6 +352,15 @@ export default function VehiclesPage() {
         </DialogContent>
       </Dialog>
 
+      <VehicleFormDialog
+        open={vehicleFormOpen}
+        onClose={() => {
+          setVehicleFormOpen(false)
+          setEditVehicle(null)
+        }}
+        types={types}
+        editVehicle={editVehicle}
+      />
       {/* Dialog usunięcia typu */}
       <Dialog
         open={!!deleteTypeTarget}
