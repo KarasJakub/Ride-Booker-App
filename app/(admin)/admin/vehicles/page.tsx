@@ -66,6 +66,8 @@ export default function VehiclesPage() {
   } | null>(null)
   const [vehicleFormOpen, setVehicleFormOpen] = useState(false)
   const [editVehicle, setEditVehicle] = useState<Vehicle | null>(null)
+  const [typeFormOpen, setTypeFormOpen] = useState(false)
+  const [typeName, setTypeName] = useState("")
 
   // Queries
   const { data: vehicles = [], isLoading: vehiclesLoading } = useQuery({
@@ -107,6 +109,17 @@ export default function VehiclesPage() {
       setDeleteTypeTarget(null)
     },
     onError: () => toast.error("Błąd podczas usuwania"),
+  })
+
+  const addType = useMutation({
+    mutationFn: (name: string) => api.post("/vehicles/types", { name }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vehicle-types"] })
+      toast.success(`Typ ${typeName} dodany`)
+      setTypeFormOpen(false)
+      setTypeName("")
+    },
+    onError: () => toast.error("Błąd podczas dodawania"),
   })
 
   // Filtering
@@ -268,7 +281,7 @@ export default function VehiclesPage() {
         {/* TYPY */}
         <TabsContent value="types" className="space-y-4">
           <div className="flex justify-end">
-            <Button>
+            <Button onClick={() => setTypeFormOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Dodaj typ
             </Button>
@@ -389,6 +402,30 @@ export default function VehiclesPage() {
               disabled={deleteType.isPending}
             >
               {deleteType.isPending ? "Usuwanie..." : "Usuń"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={typeFormOpen} onOpenChange={setTypeFormOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Dodaj typ pojazdu</DialogTitle>
+          </DialogHeader>
+          <Input
+            placeholder="np. naked, sport, adventure"
+            value={typeName}
+            onChange={(e) => setTypeName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && addType.mutate(typeName)}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTypeFormOpen(false)}>
+              Anuluj
+            </Button>
+            <Button
+              onClick={() => addType.mutate(typeName)}
+              disabled={typeName.trim() === "" || addType.isPending}
+            >
+              {addType.isPending ? "Dodawanie..." : "Dodaj"}
             </Button>
           </DialogFooter>
         </DialogContent>
