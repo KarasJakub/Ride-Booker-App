@@ -7,6 +7,12 @@ export interface User {
   fullName: string
   role: 'SUPER_ADMIN' | 'ORG_ADMIN' | 'BRANCH_ADMIN' | 'USER'
   isActive: boolean
+  organizationId?: string
+  managedLocation?: {
+    id: string
+    name: string
+    organizationId: string
+  }
 }
 
 interface AuthState {
