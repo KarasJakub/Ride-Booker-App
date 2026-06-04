@@ -37,7 +37,7 @@ const navItems = [
   },
   {
     label: "Rezerwacje",
-    href: "/admin/reservations",
+    href: "/admin/bookings",
     icon: BookOpen,
     roles: ["BRANCH_ADMIN", "ORG_ADMIN", "SUPER_ADMIN"] as Role[],
   },
