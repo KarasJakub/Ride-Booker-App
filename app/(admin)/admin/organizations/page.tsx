@@ -120,7 +120,7 @@ export default function OrganizationsPage() {
             <TableHead>Email</TableHead>
             <TableHead>Telefon</TableHead>
             <TableHead>Strona WWW</TableHead>
-            <TableHead>Aktywna</TableHead>
+            {/* <TableHead>Aktywna</TableHead> */}
             <TableHead className="text-right">Akcje</TableHead>
           </TableRow>
         </TableHeader>
@@ -150,9 +150,9 @@ export default function OrganizationsPage() {
                 <TableCell>{org.email ?? "—"}</TableCell>
                 <TableCell>{org.phone ?? "—"}</TableCell>
                 <TableCell>{org.website ?? "—"}</TableCell>
-                <TableCell>
+                {/* <TableCell>
                   <Checkbox checked={org.isActive} disabled />
-                </TableCell>
+                </TableCell> */}
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
                     <Button
@@ -224,7 +224,7 @@ export default function OrganizationsPage() {
                 }
               />
             </div>
-            {editTarget && (
+            {/* {editTarget && (
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="isActive"
@@ -235,7 +235,7 @@ export default function OrganizationsPage() {
                 />
                 <Label htmlFor="isActive">Aktywna</Label>
               </div>
-            )}
+            )} */}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFormOpen(false)}>
