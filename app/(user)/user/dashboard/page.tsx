@@ -38,6 +38,8 @@ interface Vehicle {
 export default function UserDashboardPage() {
   const [search, setSearch] = useState("")
   const [typeFilter, setTypeFilter] = useState("all")
+  const [minPower, setMinPower] = useState("")
+  const [maxCapacity, setMaxCapacity] = useState("")
 
   const { data: vehicles = [], isLoading } = useQuery({
     queryKey: ["public-vehicles"],
@@ -57,7 +59,10 @@ export default function UserDashboardPage() {
   const filteredVehicles = availableVehicles.filter((v: Vehicle) => {
     const matchesSearch = v.name.toLowerCase().includes(search.toLowerCase())
     const matchesType = typeFilter === "all" || v.type?.id === typeFilter
-    return matchesSearch && matchesType
+    const matchesPower = minPower.trim() === "" || v.power >= Number(minPower)
+    const matchesCapacity =
+      maxCapacity.trim() === "" || v.engineCapacity <= Number(maxCapacity)
+    return matchesSearch && matchesType && matchesPower && matchesCapacity
   })
 
   return (
@@ -89,6 +94,20 @@ export default function UserDashboardPage() {
             ))}
           </SelectContent>
         </Select>
+        <Input
+          placeholder="Moc min (KM)"
+          value={minPower}
+          onChange={(e) => setMinPower(e.target.value)}
+          className="w-36"
+          type="number"
+        />
+        <Input
+          placeholder="Pojemność max (cc)"
+          value={maxCapacity}
+          onChange={(e) => setMaxCapacity(e.target.value)}
+          className="w-40"
+          type="number"
+        />
       </div>
 
       {isLoading ? (
