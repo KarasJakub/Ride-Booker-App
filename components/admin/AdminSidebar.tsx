@@ -24,6 +24,7 @@ import {
   MapPin,
   Building2,
   Bike,
+  Users,
 } from "lucide-react"
 
 type Role = "SUPER_ADMIN" | "ORG_ADMIN" | "BRANCH_ADMIN" | "USER"
@@ -70,6 +71,12 @@ const navItems = [
     href: "/admin/vehicles",
     icon: Bike,
     roles: ["SUPER_ADMIN"] as Role[],
+  },
+  {
+    label: "Użytkownicy",
+    href: "/admin/users",
+    icon: Users,
+    roles: ["SUPER_ADMIN", "ORG_ADMIN"] as Role[],
   },
 ]
 
