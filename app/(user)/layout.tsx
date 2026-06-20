@@ -7,7 +7,7 @@ import { useAuthStore } from "@/store/authStore"
 import api from "@/lib/apiClient"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/shared/ThemeToggle"
-import { CalendarCheck, LogOut, Bike } from "lucide-react"
+import { CalendarCheck, LogOut, Bike, Heart } from "lucide-react"
 import { toast } from "sonner"
 
 export default function UserLayout({
@@ -76,6 +76,19 @@ export default function UserLayout({
               >
                 <CalendarCheck className="w-4 h-4 mr-2" />
                 Moje rezerwacje
+              </Button>
+            </Link>
+            <Link href="/user/favorites">
+              <Button
+                variant={
+                  pathname?.startsWith("/user/favorites")
+                    ? "secondary"
+                    : "ghost"
+                }
+                size="sm"
+              >
+                <Heart className="w-4 h-4 mr-2" />
+                Ulubione
               </Button>
             </Link>
             <ThemeToggle />

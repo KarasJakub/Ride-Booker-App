@@ -15,6 +15,9 @@ import { format } from "date-fns"
 import { pl } from "date-fns/locale"
 import api from "@/lib/apiClient"
 import Link from "next/link"
+import { Heart } from "lucide-react"
+import { useFavorites } from "@/hooks/use-favorites"
+import Image from "next/image"
 
 interface Location {
   id: string
@@ -58,6 +61,7 @@ export default function VehicleDetailPage() {
   >(null)
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null)
   const [notes, setNotes] = useState("")
+  const { favoriteIds, toggleFavorite } = useFavorites()
 
   const { data: vehicle, isLoading } = useQuery({
     queryKey: ["vehicle-detail", vehicleId],
@@ -124,7 +128,7 @@ export default function VehicleDetailPage() {
       <div className="rounded-lg border border-border/60 overflow-hidden">
         <div className="h-64 bg-muted flex items-center justify-center">
           {vehicle.imageUrl ? (
-            <img
+            <Image
               src={vehicle.imageUrl}
               alt={vehicle.name}
               className="w-full h-full object-cover"
@@ -140,6 +144,24 @@ export default function VehicleDetailPage() {
           <div className="flex items-start justify-between gap-3">
             <h1 className="text-2xl font-semibold">{vehicle.name}</h1>
             <Badge variant="secondary">{vehicle.type?.name}</Badge>
+            <button
+              onClick={() => toggleFavorite(vehicle.id)}
+              className="w-9 h-9 rounded-full border border-border/60 flex items-center justify-center hover:border-border transition-colors"
+            >
+              <Heart
+                className="w-4 h-4"
+                fill={
+                  favoriteIds.has(vehicle.id)
+                    ? "hsl(var(--brand-accent))"
+                    : "none"
+                }
+                style={{
+                  color: favoriteIds.has(vehicle.id)
+                    ? "hsl(var(--brand-accent))"
+                    : undefined,
+                }}
+              />
+            </button>
           </div>
           <p className="text-muted-foreground">
             {vehicle.engineCapacity} cc · {vehicle.power} KM

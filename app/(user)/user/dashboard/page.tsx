@@ -17,6 +17,8 @@ import {
 import { Bike, ArrowRight } from "lucide-react"
 import api from "@/lib/apiClient"
 import Image from "next/image"
+import { Heart } from "lucide-react"
+import { useFavorites } from "@/hooks/use-favorites"
 
 interface VehicleType {
   id: string
@@ -65,6 +67,7 @@ export default function UserDashboardPage() {
     return matchesSearch && matchesType && matchesPower && matchesCapacity
   })
 
+  const { favoriteIds, toggleFavorite } = useFavorites()
   return (
     <div className="space-y-8">
       <div className="space-y-1">
@@ -145,6 +148,29 @@ export default function UserDashboardPage() {
                     strokeWidth={1.5}
                   />
                 )}
+
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    toggleFavorite(vehicle.id)
+                  }}
+                  className="absolute top-3 right-3 w-8 h-8 rounded-full bg-background/90 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-colors"
+                >
+                  <Heart
+                    className="w-4 h-4"
+                    fill={
+                      favoriteIds.has(vehicle.id)
+                        ? "hsl(var(--brand-accent))"
+                        : "none"
+                    }
+                    style={{
+                      color: favoriteIds.has(vehicle.id)
+                        ? "hsl(var(--brand-accent))"
+                        : undefined,
+                    }}
+                  />
+                </button>
               </div>
 
               <div className="p-4 space-y-2">
