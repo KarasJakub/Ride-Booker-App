@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -32,6 +32,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import api from "@/lib/apiClient"
+import Image from "next/image"
 
 const vehicleSchema = z.object({
   name: z.string().min(1, "Nazwa jest wymagana"),
@@ -39,7 +40,7 @@ const vehicleSchema = z.object({
   engineCapacity: z.number().min(1, "Pojemność jest wymagana"),
   power: z.number().min(1, "Moc jest wymagana"),
   description: z.string().optional(),
-  imageUrl: z.string().url("Nieprawidłowy URL").optional().or(z.literal("")),
+  //imageUrl: z.string().url("Nieprawidłowy URL").optional().or(z.literal("")),
 })
 
 type VehicleFormValues = z.infer<typeof vehicleSchema>
@@ -72,53 +73,54 @@ export default function VehicleFormDialog({
   types,
   editVehicle,
 }: Props) {
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(
+    () => editVehicle?.imageUrl ?? null
+  )
   const queryClient = useQueryClient()
   const isEdit = !!editVehicle
 
   const form = useForm<VehicleFormValues>({
     resolver: zodResolver(vehicleSchema),
-    defaultValues: {
-      name: "",
-      typeId: "",
-      engineCapacity: 0,
-      power: 0,
-      description: "",
-      imageUrl: "",
-    },
+    defaultValues: editVehicle
+      ? {
+          name: editVehicle.name,
+          typeId: editVehicle.typeId,
+          engineCapacity: editVehicle.engineCapacity,
+          power: editVehicle.power,
+          description: editVehicle.description ?? "",
+        }
+      : {
+          name: "",
+          typeId: "",
+          engineCapacity: 0,
+          power: 0,
+          description: "",
+        },
   })
 
-  useEffect(() => {
-    if (editVehicle) {
-      form.reset({
-        name: editVehicle.name,
-        typeId: editVehicle.typeId,
-        engineCapacity: editVehicle.engineCapacity,
-        power: editVehicle.power,
-        description: editVehicle.description ?? "",
-        imageUrl: editVehicle.imageUrl ?? "",
-      })
-    } else {
-      form.reset({
-        name: "",
-        typeId: "",
-        engineCapacity: 0,
-        power: 0,
-        description: "",
-        imageUrl: "",
-      })
-    }
-  }, [editVehicle, open, form])
-
   const mutation = useMutation({
-    mutationFn: (values: VehicleFormValues) => {
+    mutationFn: async (values: VehicleFormValues) => {
       const payload = {
         ...values,
-        imageUrl: values.imageUrl || undefined,
         description: values.description || undefined,
       }
-      return isEdit
-        ? api.patch(`/vehicles/${editVehicle!.id}`, payload)
-        : api.post("/vehicles", payload)
+
+      const response = isEdit
+        ? await api.patch(`/vehicles/${editVehicle!.id}`, payload)
+        : await api.post("/vehicles", payload)
+
+      const vehicleId = response.data.id
+
+      if (imageFile) {
+        const formData = new FormData()
+        formData.append("file", imageFile)
+        await api.post(`/vehicles/${vehicleId}/image`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        })
+      }
+
+      return response
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vehicles"] })
@@ -233,19 +235,32 @@ export default function VehicleFormDialog({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="imageUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL zdjęcia</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+            <div className="space-y-2">
+              <FormLabel>Zdjęcie pojazdu</FormLabel>
+
+              {imagePreview && (
+                <div className="relative w-full h-40 rounded-md overflow-hidden bg-muted">
+                  <Image
+                    fill
+                    src={imagePreview}
+                    alt="Podgląd"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
               )}
-            />
+
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    setImageFile(file)
+                    setImagePreview(URL.createObjectURL(file))
+                  }
+                }}
+              />
+            </div>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>

@@ -140,6 +140,7 @@ export default function UserDashboardPage() {
                   <Image
                     src={vehicle.imageUrl}
                     alt={vehicle.name}
+                    fill
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 ) : (
@@ -158,7 +159,7 @@ export default function UserDashboardPage() {
                   className="absolute top-3 right-3 w-8 h-8 rounded-full bg-background/90 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-colors"
                 >
                   <Heart
-                    className="w-4 h-4"
+                    className="w-4 h-4 z-10"
                     fill={
                       favoriteIds.has(vehicle.id)
                         ? "hsl(var(--brand-accent))"

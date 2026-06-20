@@ -121,11 +121,12 @@ export default function MyBookingsPage() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
-                    <div className="w-16 h-16 rounded-md bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                    <div className="relative w-16 h-16 rounded-md bg-muted flex items-center justify-center shrink-0 overflow-hidden">
                       {vehicle.imageUrl ? (
                         <Image
                           src={vehicle.imageUrl}
                           alt={vehicle.name}
+                          fill
                           className="w-full h-full object-cover"
                         />
                       ) : (

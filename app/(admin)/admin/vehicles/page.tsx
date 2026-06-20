@@ -366,6 +366,7 @@ export default function VehiclesPage() {
       </Dialog>
 
       <VehicleFormDialog
+        key={editVehicle?.id ?? "new"}
         open={vehicleFormOpen}
         onClose={() => {
           setVehicleFormOpen(false)

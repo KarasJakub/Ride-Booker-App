@@ -126,11 +126,12 @@ export default function VehicleDetailPage() {
       </Link>
 
       <div className="rounded-lg border border-border/60 overflow-hidden">
-        <div className="h-64 bg-muted flex items-center justify-center">
+        <div className="relative h-64 bg-muted flex items-center justify-center">
           {vehicle.imageUrl ? (
             <Image
               src={vehicle.imageUrl}
               alt={vehicle.name}
+              fill
               className="w-full h-full object-cover"
             />
           ) : (

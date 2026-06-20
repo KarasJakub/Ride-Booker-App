@@ -43,6 +43,7 @@ export default function FavoritesPage() {
                   <Image
                     src={fav.vehicle.imageUrl}
                     alt={fav.vehicle.name}
+                    fill
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 ) : (
