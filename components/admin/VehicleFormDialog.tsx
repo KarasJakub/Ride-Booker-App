@@ -33,6 +33,7 @@ import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import api from "@/lib/apiClient"
 import Image from "next/image"
+import imageCompression from "browser-image-compression"
 
 const vehicleSchema = z.object({
   name: z.string().min(1, "Nazwa jest wymagana"),
@@ -129,6 +130,33 @@ export default function VehicleFormDialog({
     },
     onError: () => toast.error("Błąd podczas zapisywania"),
   })
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      toast.error("Dozwolone formaty: JPG, PNG, WEBP")
+      return
+    }
+
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error("Plik jest za duży — maksymalny rozmiar to 15MB")
+      return
+    }
+
+    try {
+      const compressed = await imageCompression(file, {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1600,
+        useWebWorker: true,
+      })
+      setImageFile(compressed)
+      setImagePreview(URL.createObjectURL(compressed))
+    } catch {
+      toast.error("Błąd podczas przetwarzania zdjęcia")
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -249,17 +277,7 @@ export default function VehicleFormDialog({
                 </div>
               )}
 
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) {
-                    setImageFile(file)
-                    setImagePreview(URL.createObjectURL(file))
-                  }
-                }}
-              />
+              <Input type="file" accept="image/*" onChange={handleFileChange} />
             </div>
 
             <DialogFooter>
