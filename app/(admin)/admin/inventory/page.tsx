@@ -21,6 +21,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { toast } from "sonner"
 import { Plus, Trash2 } from "lucide-react"
 import api from "@/lib/apiClient"
@@ -39,6 +46,17 @@ interface Vehicle {
   type: VehicleType
 }
 
+interface Organization {
+  id: string
+  name: string
+}
+
+interface Location {
+  id: string
+  name: string
+  organizationId: string
+}
+
 interface InventoryItem {
   id: string
   vehicleId: string
@@ -46,11 +64,14 @@ interface InventoryItem {
   quantity: number
   isAvailable: boolean
   vehicle: Vehicle
+  location?: { id: string; name: string; city: string; organizationId?: string }
 }
 
 export default function InventoryPage() {
   const queryClient = useQueryClient()
   const user = useAuthStore((s) => s.user)
+  const isBranchAdmin = user?.role === "BRANCH_ADMIN"
+  const isSuperAdmin = user?.role === "SUPER_ADMIN"
   const locationId = user?.managedLocation?.id
   const organizationId = user?.managedLocation?.organizationId
 
@@ -60,22 +81,62 @@ export default function InventoryPage() {
   } | null>(null)
   const [addTarget, setAddTarget] = useState<Vehicle | null>(null)
 
-  // Download inventory for user's location
+  // Filtry tylko dla SUPER_ADMIN / ORG_ADMIN
+  const [orgFilter, setOrgFilter] = useState<string>("all")
+  const [locationFilter, setLocationFilter] = useState<string>("all")
+
+  const { data: organizations = [] } = useQuery({
+    queryKey: ["organizations"],
+    queryFn: () => api.get("/organizations").then((r) => r.data),
+    enabled: isSuperAdmin,
+  })
+
+  const { data: adminLocations = [] } = useQuery({
+    queryKey: ["locations", user?.organizationId, orgFilter],
+    queryFn: () =>
+      api
+        .get("/locations", {
+          params: isSuperAdmin
+            ? orgFilter !== "all"
+              ? { organizationId: orgFilter }
+              : {}
+            : { organizationId: user?.organizationId },
+        })
+        .then((r) => r.data),
+    enabled: !isBranchAdmin,
+  })
+
+  // Download inventory for user's location (BRANCH_ADMIN)
   const { data: inventory = [], isLoading: inventoryLoading } = useQuery({
     queryKey: ["inventory", locationId],
     queryFn: () =>
       api.get(`/inventory/location/${locationId}`).then((r) => r.data),
-    enabled: !!locationId,
+    enabled: !!locationId && isBranchAdmin,
   })
 
-  // Fetch all vehicles in the organization
+  // Download all inventory with filters (SUPER_ADMIN, ORG_ADMIN)
+  const { data: allInventory = [], isLoading: allInventoryLoading } = useQuery({
+    queryKey: ["inventory-all", orgFilter, locationFilter],
+    queryFn: () =>
+      api
+        .get("/inventory", {
+          params: {
+            organizationId: orgFilter !== "all" ? orgFilter : undefined,
+            locationId: locationFilter !== "all" ? locationFilter : undefined,
+          },
+        })
+        .then((r) => r.data),
+    enabled: !isBranchAdmin,
+  })
+
+  // Fetch all vehicles in the organization (BRANCH_ADMIN only)
   const { data: allVehicles = [], isLoading: vehiclesLoading } = useQuery({
     queryKey: ["vehicles", organizationId],
     queryFn: () =>
       api
         .get("/vehicles", { params: { organizationId, isActive: true } })
         .then((r) => r.data),
-    enabled: !!organizationId,
+    enabled: !!organizationId && isBranchAdmin,
   })
 
   // Vehicles that are in the inventory (by vehicleId)
@@ -88,6 +149,11 @@ export default function InventoryPage() {
     (v: Vehicle) => !inventoryVehicleIds.has(v.id)
   )
 
+  const invalidateInventory = () => {
+    queryClient.invalidateQueries({ queryKey: ["inventory"] })
+    queryClient.invalidateQueries({ queryKey: ["inventory-all"] })
+  }
+
   // Add vehicle to inventory
   const addToInventory = useMutation({
     mutationFn: (vehicle: Vehicle) =>
@@ -98,7 +164,7 @@ export default function InventoryPage() {
         isAvailable: true,
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["inventory", locationId] })
+      invalidateInventory()
       toast.success("Pojazd dodany do inwentarza")
       setAddTarget(null)
     },
@@ -110,7 +176,7 @@ export default function InventoryPage() {
     mutationFn: ({ id, isAvailable }: { id: string; isAvailable: boolean }) =>
       api.patch(`/inventory/${id}`, { isAvailable }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["inventory", locationId] })
+      invalidateInventory()
       toast.success("Status zaktualizowany")
     },
     onError: () => toast.error("Błąd podczas aktualizacji"),
@@ -120,14 +186,14 @@ export default function InventoryPage() {
   const removeFromInventory = useMutation({
     mutationFn: (id: string) => api.delete(`/inventory/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["inventory", locationId] })
+      invalidateInventory()
       toast.success("Pojazd usunięty z inwentarza")
       setDeleteTarget(null)
     },
     onError: () => toast.error("Błąd podczas usuwania"),
   })
 
-  if (!locationId) {
+  if (isBranchAdmin && !locationId) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-muted-foreground">
@@ -137,6 +203,128 @@ export default function InventoryPage() {
     )
   }
 
+  // ─── Widok SUPER_ADMIN / ORG_ADMIN — pogrupowany po lokalizacji ───
+  if (!isBranchAdmin) {
+    const groupedByLocation = (allInventory as InventoryItem[]).reduce(
+      (acc: Record<string, InventoryItem[]>, item: InventoryItem) => {
+        const key = item.location?.id ?? "unknown"
+        if (!acc[key]) acc[key] = []
+        acc[key].push(item)
+        return acc
+      },
+      {}
+    )
+
+    return (
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">Inwentarz</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Wszystkie pojazdy przypisane do lokalizacji
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 flex-wrap">
+          {isSuperAdmin && (
+            <Select
+              value={orgFilter}
+              onValueChange={(v) => {
+                setOrgFilter(v)
+                setLocationFilter("all")
+              }}
+            >
+              <SelectTrigger className="w-56">
+                <SelectValue placeholder="Wszystkie organizacje" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Wszystkie organizacje</SelectItem>
+                {organizations.map((org: Organization) => (
+                  <SelectItem key={org.id} value={org.id}>
+                    {org.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          <Select value={locationFilter} onValueChange={setLocationFilter}>
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder="Wszystkie lokalizacje" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Wszystkie lokalizacje</SelectItem>
+              {adminLocations.map((loc: Location) => (
+                <SelectItem key={loc.id} value={loc.id}>
+                  {loc.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {allInventoryLoading ? (
+          <p className="text-muted-foreground text-center py-12">
+            Ładowanie...
+          </p>
+        ) : Object.keys(groupedByLocation).length === 0 ? (
+          <p className="text-muted-foreground text-center py-12">
+            Brak pojazdów w inwentarzu
+          </p>
+        ) : (
+          <div className="space-y-8">
+            {Object.entries(groupedByLocation).map(([locId, items]) => (
+              <div key={locId} className="space-y-3">
+                <h2 className="text-lg font-medium">
+                  {(items as InventoryItem[])[0].location?.name}{" "}
+                  <span className="text-muted-foreground font-normal">
+                    — {(items as InventoryItem[])[0].location?.city}
+                  </span>
+                </h2>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nazwa</TableHead>
+                      <TableHead>Typ</TableHead>
+                      <TableHead>Pojemność (cc)</TableHead>
+                      <TableHead>Moc (KM)</TableHead>
+                      <TableHead>Dostępny</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {items.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">
+                          {item.vehicle.name}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">
+                            {item.vehicle.type?.name}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{item.vehicle.engineCapacity}</TableCell>
+                        <TableCell>{item.vehicle.power}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={item.isAvailable ? "default" : "secondary"}
+                          >
+                            {item.isAvailable ? "Tak" : "Nie"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ─── Widok BRANCH_ADMIN — pełny CRUD (bez zmian) ───
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">

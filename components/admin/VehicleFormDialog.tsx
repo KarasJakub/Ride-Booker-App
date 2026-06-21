@@ -1,10 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useAuthStore } from "@/store/authStore"
 import {
   Dialog,
   DialogContent,
@@ -38,10 +39,10 @@ import imageCompression from "browser-image-compression"
 const vehicleSchema = z.object({
   name: z.string().min(1, "Nazwa jest wymagana"),
   typeId: z.string().min(1, "Typ jest wymagany"),
+  organizationId: z.string().min(1, "Organizacja jest wymagana"),
   engineCapacity: z.number().min(1, "Pojemność jest wymagana"),
   power: z.number().min(1, "Moc jest wymagana"),
   description: z.string().optional(),
-  //imageUrl: z.string().url("Nieprawidłowy URL").optional().or(z.literal("")),
 })
 
 type VehicleFormValues = z.infer<typeof vehicleSchema>
@@ -51,10 +52,16 @@ interface VehicleType {
   name: string
 }
 
+interface Organization {
+  id: string
+  name: string
+}
+
 interface Vehicle {
   id: string
   name: string
   typeId: string
+  organizationId?: string
   engineCapacity: number
   power: number
   description?: string
@@ -74,6 +81,10 @@ export default function VehicleFormDialog({
   types,
   editVehicle,
 }: Props) {
+  const currentUser = useAuthStore((s) => s.user)
+  const isSuperAdmin = currentUser?.role === "SUPER_ADMIN"
+  const isOrgAdmin = currentUser?.role === "ORG_ADMIN"
+
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(
     () => editVehicle?.imageUrl ?? null
@@ -81,12 +92,19 @@ export default function VehicleFormDialog({
   const queryClient = useQueryClient()
   const isEdit = !!editVehicle
 
+  const { data: organizations = [] } = useQuery({
+    queryKey: ["organizations"],
+    queryFn: () => api.get("/organizations").then((r) => r.data),
+    enabled: isSuperAdmin,
+  })
+
   const form = useForm<VehicleFormValues>({
     resolver: zodResolver(vehicleSchema),
     defaultValues: editVehicle
       ? {
           name: editVehicle.name,
           typeId: editVehicle.typeId,
+          organizationId: editVehicle.organizationId ?? "",
           engineCapacity: editVehicle.engineCapacity,
           power: editVehicle.power,
           description: editVehicle.description ?? "",
@@ -94,6 +112,7 @@ export default function VehicleFormDialog({
       : {
           name: "",
           typeId: "",
+          organizationId: isOrgAdmin ? currentUser?.organizationId ?? "" : "",
           engineCapacity: 0,
           power: 0,
           description: "",
@@ -208,6 +227,33 @@ export default function VehicleFormDialog({
                 </FormItem>
               )}
             />
+
+            {isSuperAdmin && !isEdit && (
+              <FormField
+                control={form.control}
+                name="organizationId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Organizacja</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Wybierz organizację" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {organizations.map((org: Organization) => (
+                          <SelectItem key={org.id} value={org.id}>
+                            {org.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
