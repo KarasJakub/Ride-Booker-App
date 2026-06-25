@@ -14,7 +14,7 @@ export default function LogoutButton() {
       await api.post("/auth/logout")
     } finally {
       clearAuth()
-      router.push("/login")
+      router.push("/admin/login")
     }
   }
 

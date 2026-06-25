@@ -27,6 +27,7 @@ import {
   Users,
   Mail,
 } from "lucide-react"
+import { ThemeToggle } from "@/components/shared/ThemeToggle"
 
 type Role = "SUPER_ADMIN" | "ORG_ADMIN" | "BRANCH_ADMIN" | "USER"
 
@@ -127,6 +128,10 @@ export function AdminSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">Motyw</span>
+          <ThemeToggle />
+        </div>
         <LogoutButton />
       </SidebarFooter>
     </Sidebar>

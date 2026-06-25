@@ -16,6 +16,10 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/admin/login', request.url))
   }
 
+    if (isUserRoute && !isAuthenticated) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
+
   if ((isLoginPage || isRegisterPage) && isAuthenticated) {
     return NextResponse.redirect(new URL('/user/dashboard', request.url))
   }
