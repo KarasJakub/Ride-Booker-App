@@ -119,6 +119,14 @@ export default function LoginPage() {
             Zarejestruj się
           </Link>
         </p>
+        <p className="text-center text-sm text-muted-foreground">
+          <Link
+            href="/forgot-password"
+            className="underline underline-offset-4 hover:text-primary"
+          >
+            Zapomniałeś hasła?
+          </Link>
+        </p>
       </div>
     </div>
   )

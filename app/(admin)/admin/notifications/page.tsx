@@ -113,7 +113,7 @@ export default function NotificationsPage() {
           }}
         >
           <Plus className="w-4 h-4 mr-2" />
-          Dodaj szablon
+          Dodaj powiadomienie
         </Button>
       </div>
 
