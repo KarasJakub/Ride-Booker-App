@@ -13,6 +13,12 @@ export function middleware(request: NextRequest) {
   const isUserRoute = pathname.startsWith('/user')
   const isForgotPasswordPage = pathname === '/forgot-password'
   const isResetPasswordPage = pathname === '/reset-password'
+  const isDemoPage = pathname === '/demo'
+  const isHomePage = pathname === '/'
+
+  if (isDemoPage || isHomePage) {
+    return NextResponse.next()
+  }
 
   if ((isAdminRoute || isUserRoute) && !isAuthenticated) {
     return NextResponse.redirect(new URL('/admin/login', request.url))

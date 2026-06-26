@@ -98,6 +98,26 @@ export default function VehicleDetailPage() {
 
   const availableSlots = slots.filter((s: Slot) => s.isAvailable)
 
+  const { data: myBookings = [] } = useQuery({
+    queryKey: ["my-bookings"],
+    queryFn: () => api.get("/bookings/me").then((r) => r.data),
+  })
+
+  const hasConflict = (slotId: string) => {
+    const slot = availableSlots.find((s: Slot) => s.id === slotId)
+    if (!slot) return false
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return myBookings.some((booking: any) => {
+      if (!["PENDING", "CONFIRMED"].includes(booking.status)) return false
+      const bookingStart = new Date(booking.slot.startTime)
+      const bookingEnd = new Date(booking.slot.endTime)
+      const slotStart = new Date(slot.startTime)
+      const slotEnd = new Date(slot.endTime)
+      return slotStart < bookingEnd && slotEnd > bookingStart
+    })
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -238,33 +258,46 @@ export default function VehicleDetailPage() {
               </p>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {availableSlots.map((slot: Slot) => (
-                  <button
-                    key={slot.id}
-                    onClick={() => setSelectedSlotId(slot.id)}
-                    className={`p-3 rounded-lg border text-left transition-colors ${
-                      selectedSlotId === slot.id
-                        ? "border-2"
-                        : "border-border/60 hover:border-border"
-                    }`}
-                    style={
-                      selectedSlotId === slot.id
-                        ? { borderColor: "hsl(var(--brand-accent))" }
-                        : undefined
-                    }
-                  >
-                    <p className="text-sm font-medium">
-                      {format(new Date(slot.startTime), "d MMMM", {
-                        locale: pl,
-                      })}
-                    </p>
-                    <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
-                      <Clock className="w-3 h-3" />
-                      {format(new Date(slot.startTime), "HH:mm")}–
-                      {format(new Date(slot.endTime), "HH:mm")}
-                    </p>
-                  </button>
-                ))}
+                {availableSlots.map((slot: Slot) => {
+                  const conflict = hasConflict(slot.id)
+                  const isSelected = selectedSlotId === slot.id
+
+                  return (
+                    <button
+                      key={slot.id}
+                      onClick={() => !conflict && setSelectedSlotId(slot.id)}
+                      disabled={conflict}
+                      className={`p-3 rounded-lg border text-left transition-colors ${
+                        conflict
+                          ? "border-border/40 opacity-50 cursor-not-allowed bg-muted/30"
+                          : isSelected
+                          ? "border-2"
+                          : "border-border/60 hover:border-border"
+                      }`}
+                      style={
+                        isSelected && !conflict
+                          ? { borderColor: "hsl(var(--brand-accent))" }
+                          : undefined
+                      }
+                    >
+                      <p className="text-sm font-medium">
+                        {format(new Date(slot.startTime), "d MMMM", {
+                          locale: pl,
+                        })}
+                      </p>
+                      <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
+                        <Clock className="w-3 h-3" />
+                        {format(new Date(slot.startTime), "HH:mm")}–
+                        {format(new Date(slot.endTime), "HH:mm")}
+                      </p>
+                      {conflict && (
+                        <p className="text-xs text-destructive mt-1">
+                          Masz już rezerwację
+                        </p>
+                      )}
+                    </button>
+                  )
+                })}
               </div>
             )}
           </div>

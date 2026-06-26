@@ -92,8 +92,8 @@ export default function SlotFormDialog({
   )
 
   const buildDateTimes = () => {
-    const startTime = new Date(`${date}T${startHour}:00.000Z`).toISOString()
-    const endTime = new Date(`${date}T${endHour}:00.000Z`).toISOString()
+    const startTime = new Date(`${date}T${startHour}:00.000`).toISOString()
+    const endTime = new Date(`${date}T${endHour}:00.000`).toISOString()
     return { startTime, endTime }
   }
 

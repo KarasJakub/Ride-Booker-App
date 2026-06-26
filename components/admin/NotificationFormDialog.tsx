@@ -48,7 +48,7 @@ const RECIPIENT_LABELS: Record<RecipientType, string> = {
   BRANCH_ADMIN: "Branch Admin",
 }
 
-// Zmienne dostępne per typ zdarzenia
+// per event type
 const EVENT_VARIABLES: Record<EventType, string[]> = {
   BOOKING_CREATED: [
     "recipient_name",
@@ -127,7 +127,7 @@ export default function NotificationFormDialog({
       (isBranchAdmin ? currentUser?.managedLocation?.id : "")
   )
 
-  // Branch admin może wybrać tylko swoją lokalizację — pobierz listę dla innych ról
+  // Branch admins can only create templates for their own location, so we don't need to fetch locations for them
   const { data: locations = [] } = useQuery({
     queryKey: ["locations", currentUser?.organizationId],
     queryFn: () =>
@@ -157,7 +157,9 @@ export default function NotificationFormDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notification-templates"] })
-      toast.success(isEdit ? "Szablon zaktualizowany" : "Szablon dodany")
+      toast.success(
+        isEdit ? "Powiadomienie zaktualizowane" : "Powiadomienie dodane"
+      )
       onClose()
     },
     onError: () => toast.error("Błąd podczas zapisywania"),

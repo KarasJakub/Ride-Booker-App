@@ -203,7 +203,7 @@ export default function InventoryPage() {
     )
   }
 
-  // ─── Widok SUPER_ADMIN / ORG_ADMIN — pogrupowany po lokalizacji ───
+  // View for SUPER_ADMIN and ORG_ADMIN (grouped by location)
   if (!isBranchAdmin) {
     const groupedByLocation = (allInventory as InventoryItem[]).reduce(
       (acc: Record<string, InventoryItem[]>, item: InventoryItem) => {
@@ -324,7 +324,7 @@ export default function InventoryPage() {
     )
   }
 
-  // ─── Widok BRANCH_ADMIN — pełny CRUD (bez zmian) ───
+  // View for BRANCH_ADMIN (single location)
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">

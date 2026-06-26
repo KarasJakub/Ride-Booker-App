@@ -159,7 +159,7 @@ export default function LocationsPage() {
         </Button>
       </div>
 
-      {/* Filtering by organization — only SUPER_ADMIN */}
+      {/* Filtering by organization - only SUPER_ADMIN */}
       {isSuperAdmin && (
         <Select value={orgFilter} onValueChange={setOrgFilter}>
           <SelectTrigger className="w-64">
@@ -185,7 +185,6 @@ export default function LocationsPage() {
             <TableHead>Telefon</TableHead>
             {isSuperAdmin && <TableHead>Organizacja</TableHead>}
             <TableHead>Branch Admin</TableHead>
-            {/* <TableHead>Aktywna</TableHead> */}
             <TableHead className="text-right">Akcje</TableHead>
           </TableRow>
         </TableHeader>
@@ -219,9 +218,6 @@ export default function LocationsPage() {
                   <TableCell>{loc.organization?.name ?? "—"}</TableCell>
                 )}
                 <TableCell>{loc.branchAdmin?.fullName ?? "—"}</TableCell>
-                {/* <TableCell>
-                  <Checkbox checked={loc.isActive} disabled />
-                </TableCell> */}
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
                     <Button
@@ -335,18 +331,6 @@ export default function LocationsPage() {
                 </Select>
               </div>
             )}
-            {/* {editTarget && (
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="isActive"
-                  checked={form.isActive}
-                  onCheckedChange={(v) =>
-                    setForm((f) => ({ ...f, isActive: !!v }))
-                  }
-                />
-                <Label htmlFor="isActive">Aktywna</Label>
-              </div>
-            )} */}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFormOpen(false)}>
