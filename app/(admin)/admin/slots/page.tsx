@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useAuthStore } from "@/store/authStore"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Table,
@@ -45,17 +46,39 @@ interface InventoryItem {
   }
 }
 
+interface Organization {
+  id: string
+  name: string
+}
+
+interface Location {
+  id: string
+  name: string
+  organizationId: string
+}
+
 interface Slot {
   id: string
   startTime: string
   endTime: string
   isAvailable: boolean
   locationVehicleId: string
+  locationVehicle?: {
+    vehicle: { id: string; name: string; imageUrl?: string }
+    location: {
+      id: string
+      name: string
+      city: string
+      organizationId?: string
+    }
+  }
 }
 
 export default function SlotsPage() {
   const queryClient = useQueryClient()
   const user = useAuthStore((s) => s.user)
+  const isBranchAdmin = user?.role === "BRANCH_ADMIN"
+  const isSuperAdmin = user?.role === "SUPER_ADMIN"
   const locationId = user?.managedLocation?.id
 
   const [vehicleFilter, setVehicleFilter] = useState<string>("all")
@@ -67,6 +90,31 @@ export default function SlotsPage() {
     null
   )
 
+  // Filters only for SUPER_ADMIN / ORG_ADMIN
+  const [orgFilter, setOrgFilter] = useState<string>("all")
+  const [locationFilter, setLocationFilter] = useState<string>("all")
+
+  const { data: organizations = [] } = useQuery({
+    queryKey: ["organizations"],
+    queryFn: () => api.get("/organizations").then((r) => r.data),
+    enabled: isSuperAdmin,
+  })
+
+  const { data: adminLocations = [] } = useQuery({
+    queryKey: ["locations", user?.organizationId, orgFilter],
+    queryFn: () =>
+      api
+        .get("/locations", {
+          params: isSuperAdmin
+            ? orgFilter !== "all"
+              ? { organizationId: orgFilter }
+              : {}
+            : { organizationId: user?.organizationId },
+        })
+        .then((r) => r.data),
+    enabled: !isBranchAdmin,
+  })
+
   const { data: inventory = [] } = useQuery({
     queryKey: ["inventory", locationId],
     queryFn: () =>
@@ -75,15 +123,34 @@ export default function SlotsPage() {
   })
 
   const { data: slots = [], isLoading: slotsLoading } = useQuery({
-    queryKey: ["slots", locationId],
-    queryFn: () => api.get(`/slots/location/${locationId}`).then((r) => r.data),
-    enabled: !!locationId,
+    queryKey: isBranchAdmin
+      ? ["slots", locationId]
+      : ["slots-all", orgFilter, locationFilter],
+    queryFn: () => {
+      if (isBranchAdmin) {
+        return api.get(`/slots/location/${locationId}`).then((r) => r.data)
+      }
+      return api
+        .get("/slots", {
+          params: {
+            organizationId: orgFilter !== "all" ? orgFilter : undefined,
+            locationId: locationFilter !== "all" ? locationFilter : undefined,
+          },
+        })
+        .then((r) => r.data)
+    },
+    enabled: isBranchAdmin ? !!locationId : true,
   })
+
+  const invalidateSlots = () => {
+    queryClient.invalidateQueries({ queryKey: ["slots"] })
+    queryClient.invalidateQueries({ queryKey: ["slots-all"] })
+  }
 
   const deleteSlot = useMutation({
     mutationFn: (id: string) => api.delete(`/slots/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["slots", locationId] })
+      invalidateSlots()
       toast.success("Slot usunięty")
       setDeleteTarget(null)
     },
@@ -94,7 +161,7 @@ export default function SlotsPage() {
     mutationFn: ({ id, isAvailable }: { id: string; isAvailable: boolean }) =>
       api.patch(`/slots/${id}`, { isAvailable }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["slots", locationId] })
+      invalidateSlots()
       toast.success("Status zaktualizowany")
     },
     onError: () => toast.error("Błąd podczas aktualizacji"),
@@ -110,14 +177,15 @@ export default function SlotsPage() {
     return matchesVehicle && matchesAvailability
   })
 
-  const getVehicleName = (locationVehicleId: string) => {
+  const getVehicleName = (slot: Slot) => {
+    if (slot.locationVehicle?.vehicle) return slot.locationVehicle.vehicle.name
     const item = inventory.find(
-      (i: InventoryItem) => i.id === locationVehicleId
+      (i: InventoryItem) => i.id === slot.locationVehicleId
     )
     return item?.vehicle?.name ?? "—"
   }
 
-  if (!locationId) {
+  if (isBranchAdmin && !locationId) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-muted-foreground">
@@ -133,36 +201,78 @@ export default function SlotsPage() {
         <div>
           <h1 className="text-2xl font-semibold">Sloty</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {user?.managedLocation?.name}
+            {isBranchAdmin ? user?.managedLocation?.name : "Wszystkie sloty"}
           </p>
         </div>
-        <Button
-          onClick={() => {
-            setEditSlot(null)
-            setSelectedInventoryId(null)
-            setSlotFormOpen(true)
-          }}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Dodaj slot
-        </Button>
+        {isBranchAdmin && (
+          <Button
+            onClick={() => {
+              setEditSlot(null)
+              setSelectedInventoryId(null)
+              setSlotFormOpen(true)
+            }}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Dodaj slot
+          </Button>
+        )}
       </div>
 
       {/* Filtreing */}
-      <div className="flex items-center gap-4">
-        <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
-          <SelectTrigger className="w-56">
-            <SelectValue placeholder="Wszystkie pojazdy" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Wszystkie pojazdy</SelectItem>
-            {inventory.map((item: InventoryItem) => (
-              <SelectItem key={item.id} value={item.id}>
-                {item.vehicle.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="flex items-center gap-4 flex-wrap">
+        {isSuperAdmin && (
+          <Select
+            value={orgFilter}
+            onValueChange={(v) => {
+              setOrgFilter(v)
+              setLocationFilter("all")
+            }}
+          >
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder="Wszystkie organizacje" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Wszystkie organizacje</SelectItem>
+              {organizations.map((org: Organization) => (
+                <SelectItem key={org.id} value={org.id}>
+                  {org.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {!isBranchAdmin && (
+          <Select value={locationFilter} onValueChange={setLocationFilter}>
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder="Wszystkie lokalizacje" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Wszystkie lokalizacje</SelectItem>
+              {adminLocations.map((loc: Location) => (
+                <SelectItem key={loc.id} value={loc.id}>
+                  {loc.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {isBranchAdmin && (
+          <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder="Wszystkie pojazdy" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Wszystkie pojazdy</SelectItem>
+              {inventory.map((item: InventoryItem) => (
+                <SelectItem key={item.id} value={item.id}>
+                  {item.vehicle.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
         <Select
           value={availabilityFilter}
@@ -184,18 +294,21 @@ export default function SlotsPage() {
         <TableHeader>
           <TableRow>
             <TableHead>Pojazd</TableHead>
+            {!isBranchAdmin && <TableHead>Lokalizacja</TableHead>}
             <TableHead>Data</TableHead>
             <TableHead>Od</TableHead>
             <TableHead>Do</TableHead>
             <TableHead>Dostępny</TableHead>
-            <TableHead className="text-right">Akcje</TableHead>
+            {isBranchAdmin && (
+              <TableHead className="text-right">Akcje</TableHead>
+            )}
           </TableRow>
         </TableHeader>
         <TableBody>
           {slotsLoading ? (
             <TableRow>
               <TableCell
-                colSpan={6}
+                colSpan={isBranchAdmin ? 6 : 6}
                 className="text-center text-muted-foreground"
               >
                 Ładowanie...
@@ -204,7 +317,7 @@ export default function SlotsPage() {
           ) : filteredSlots.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={6}
+                colSpan={isBranchAdmin ? 6 : 6}
                 className="text-center text-muted-foreground"
               >
                 Brak slotów
@@ -214,8 +327,13 @@ export default function SlotsPage() {
             filteredSlots.map((slot: Slot) => (
               <TableRow key={slot.id}>
                 <TableCell className="font-medium">
-                  {getVehicleName(slot.locationVehicleId)}
+                  {getVehicleName(slot)}
                 </TableCell>
+                {!isBranchAdmin && (
+                  <TableCell className="text-sm text-muted-foreground">
+                    {slot.locationVehicle?.location?.name ?? "—"}
+                  </TableCell>
+                )}
                 <TableCell>
                   {format(new Date(slot.startTime), "dd.MM.yyyy", {
                     locale: pl,
@@ -226,38 +344,46 @@ export default function SlotsPage() {
                 </TableCell>
                 <TableCell>{format(new Date(slot.endTime), "HH:mm")}</TableCell>
                 <TableCell>
-                  <Checkbox
-                    checked={slot.isAvailable}
-                    onCheckedChange={(checked) =>
-                      toggleAvailable.mutate({
-                        id: slot.id,
-                        isAvailable: !!checked,
-                      })
-                    }
-                  />
+                  {isBranchAdmin ? (
+                    <Checkbox
+                      checked={slot.isAvailable}
+                      onCheckedChange={(checked) =>
+                        toggleAvailable.mutate({
+                          id: slot.id,
+                          isAvailable: !!checked,
+                        })
+                      }
+                    />
+                  ) : (
+                    <Badge variant={slot.isAvailable ? "default" : "secondary"}>
+                      {slot.isAvailable ? "Tak" : "Nie"}
+                    </Badge>
+                  )}
                 </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setEditSlot(slot)
-                        setSelectedInventoryId(slot.locationVehicleId)
-                        setSlotFormOpen(true)
-                      }}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setDeleteTarget({ id: slot.id })}
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  </div>
-                </TableCell>
+                {isBranchAdmin && (
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setEditSlot(slot)
+                          setSelectedInventoryId(slot.locationVehicleId)
+                          setSlotFormOpen(true)
+                        }}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDeleteTarget({ id: slot.id })}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                )}
               </TableRow>
             ))
           )}
@@ -288,19 +414,21 @@ export default function SlotsPage() {
         </DialogContent>
       </Dialog>
 
-      <SlotFormDialog
-        key={editSlot?.id ?? "new"}
-        open={slotFormOpen}
-        onClose={() => {
-          setSlotFormOpen(false)
-          setEditSlot(null)
-          setSelectedInventoryId(null)
-        }}
-        inventory={inventory}
-        editSlot={editSlot}
-        defaultInventoryId={selectedInventoryId}
-        locationId={locationId}
-      />
+      {isBranchAdmin && (
+        <SlotFormDialog
+          key={editSlot?.id ?? "new"}
+          open={slotFormOpen}
+          onClose={() => {
+            setSlotFormOpen(false)
+            setEditSlot(null)
+            setSelectedInventoryId(null)
+          }}
+          inventory={inventory}
+          editSlot={editSlot}
+          defaultInventoryId={selectedInventoryId}
+          locationId={locationId!}
+        />
+      )}
     </div>
   )
 }

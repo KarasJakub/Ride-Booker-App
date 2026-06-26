@@ -2,8 +2,7 @@ import axios from 'axios'
 import { useAuthStore } from '@/store/authStore'
 
 const api = axios.create({
-    //TODO: move to env variable
-  baseURL: 'http://localhost:3000',
+  baseURL: process.env.NEXT_PUBLIC_API_URL,
   withCredentials: true,
 })
 
@@ -21,8 +20,7 @@ api.interceptors.response.use(
     const originalRequest = error.config
 
     if (error.response?.status === 401 && !originalRequest._retry) {
-        const isAuthEndpoint = originalRequest.url?.includes('/auth/login') ||
-                         originalRequest.url?.includes('/auth/register')
+        const isAuthEndpoint = originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/register')
 
       if (isAuthEndpoint) {
         return Promise.reject(error)
@@ -31,7 +29,7 @@ api.interceptors.response.use(
 
       try {
         const { data } = await axios.post(
-          'http://localhost:3000/auth/refresh',
+          `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`,
           {},
           { withCredentials: true }
         )

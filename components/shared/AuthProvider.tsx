@@ -21,7 +21,7 @@ export default function AuthProvider({
         const { data } = await api.get("/auth/me")
         setAuth(data.user, data.accessToken)
       } catch {
-        // middleware zadba o redirect
+        // redirect using middleware
       }
     }
 

@@ -11,12 +11,24 @@ export function middleware(request: NextRequest) {
   const isAdminLoginPage = pathname === '/admin/login'
   const isAdminRoute = pathname.startsWith('/admin') && !isAdminLoginPage
   const isUserRoute = pathname.startsWith('/user')
+  const isForgotPasswordPage = pathname === '/forgot-password'
+  const isResetPasswordPage = pathname === '/reset-password'
+  const isDemoPage = pathname === '/demo'
+  const isHomePage = pathname === '/'
+
+  if (isDemoPage || isHomePage) {
+    return NextResponse.next()
+  }
 
   if ((isAdminRoute || isUserRoute) && !isAuthenticated) {
     return NextResponse.redirect(new URL('/admin/login', request.url))
   }
 
-  if ((isLoginPage || isRegisterPage) && isAuthenticated) {
+    if (isUserRoute && !isAuthenticated) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
+
+  if ((isLoginPage || isRegisterPage || isForgotPasswordPage || isResetPasswordPage) && isAuthenticated) {
     return NextResponse.redirect(new URL('/user/dashboard', request.url))
   }
 
@@ -26,5 +38,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/user/:path*', '/login', '/register'],
+  matcher: ['/admin/:path*', '/user/:path*', '/login', '/register', '/forgot-password', '/reset-password'],
 }

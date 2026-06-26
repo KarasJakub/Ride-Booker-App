@@ -24,7 +24,10 @@ import {
   MapPin,
   Building2,
   Bike,
+  Users,
+  Mail,
 } from "lucide-react"
+import { ThemeToggle } from "@/components/shared/ThemeToggle"
 
 type Role = "SUPER_ADMIN" | "ORG_ADMIN" | "BRANCH_ADMIN" | "USER"
 
@@ -71,6 +74,18 @@ const navItems = [
     icon: Bike,
     roles: ["SUPER_ADMIN"] as Role[],
   },
+  {
+    label: "Użytkownicy",
+    href: "/admin/users",
+    icon: Users,
+    roles: ["SUPER_ADMIN", "ORG_ADMIN"] as Role[],
+  },
+  {
+    label: "Powiadomienia",
+    href: "/admin/notifications",
+    icon: Mail,
+    roles: ["SUPER_ADMIN", "ORG_ADMIN", "BRANCH_ADMIN"] as Role[],
+  },
 ]
 
 export function AdminSidebar() {
@@ -113,6 +128,10 @@ export function AdminSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">Motyw</span>
+          <ThemeToggle />
+        </div>
         <LogoutButton />
       </SidebarFooter>
     </Sidebar>

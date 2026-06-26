@@ -278,7 +278,7 @@ export default function VehiclesPage() {
           </Table>
         </TabsContent>
 
-        {/* TYPY */}
+        {/* Types */}
         <TabsContent value="types" className="space-y-4">
           <div className="flex justify-end">
             <Button onClick={() => setTypeFormOpen(true)}>
@@ -335,7 +335,7 @@ export default function VehiclesPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Dialog usunięcia pojazdu */}
+      {/* Dialog for deleting vehicle */}
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader>
@@ -366,6 +366,7 @@ export default function VehiclesPage() {
       </Dialog>
 
       <VehicleFormDialog
+        key={editVehicle?.id ?? "new"}
         open={vehicleFormOpen}
         onClose={() => {
           setVehicleFormOpen(false)
@@ -374,7 +375,7 @@ export default function VehiclesPage() {
         types={types}
         editVehicle={editVehicle}
       />
-      {/* Dialog usunięcia typu */}
+      {/* Dialog for deleting vehicle type */}
       <Dialog
         open={!!deleteTypeTarget}
         onOpenChange={() => setDeleteTypeTarget(null)}

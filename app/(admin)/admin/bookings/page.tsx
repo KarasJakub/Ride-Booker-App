@@ -86,31 +86,108 @@ interface Booking {
     startTime: string
     endTime: string
     locationVehicle: {
-      vehicle: { id: string; name: string }
+      vehicle: { id: string; name: string; type?: { id: string; name: string } }
+      location: {
+        id: string
+        name: string
+        city: string
+        organizationId?: string
+      }
     }
   }
+}
+
+interface Organization {
+  id: string
+  name: string
+}
+
+interface Location {
+  id: string
+  name: string
+  organizationId: string
+}
+
+interface VehicleType {
+  id: string
+  name: string
 }
 
 export default function BookingsPage() {
   const queryClient = useQueryClient()
   const user = useAuthStore((s) => s.user)
+  const isBranchAdmin = user?.role === "BRANCH_ADMIN"
+  const isSuperAdmin = user?.role === "SUPER_ADMIN"
   const locationId = user?.managedLocation?.id
 
   const [selectedStatuses, setSelectedStatuses] = useState<BookingStatus[]>([])
   const [vehicleFilter, setVehicleFilter] = useState<string>("all")
   const [statusPopoverOpen, setStatusPopoverOpen] = useState(false)
 
+  // Filters only for SUPER_ADMIN / ORG_ADMIN
+  const [orgFilter, setOrgFilter] = useState<string>("all")
+  const [locationFilter, setLocationFilter] = useState<string>("all")
+  const [typeFilter, setTypeFilter] = useState<string>("all")
+
   const [rejectTarget, setRejectTarget] = useState<Booking | null>(null)
   const [rejectionReason, setRejectionReason] = useState("")
 
   const [detailsTarget, setDetailsTarget] = useState<Booking | null>(null)
 
-  const { data: bookings = [], isLoading } = useQuery({
-    queryKey: ["bookings", locationId],
-    queryFn: () =>
-      api.get(`/bookings/location/${locationId}`).then((r) => r.data),
-    enabled: !!locationId,
+  // Supporting data fetching for filters (organizations, locations, vehicle types)
+  const { data: organizations = [] } = useQuery({
+    queryKey: ["organizations"],
+    queryFn: () => api.get("/organizations").then((r) => r.data),
+    enabled: isSuperAdmin,
   })
+
+  const { data: locations = [] } = useQuery({
+    queryKey: ["locations", user?.organizationId, orgFilter],
+    queryFn: () =>
+      api
+        .get("/locations", {
+          params: isSuperAdmin
+            ? orgFilter !== "all"
+              ? { organizationId: orgFilter }
+              : {}
+            : { organizationId: user?.organizationId },
+        })
+        .then((r) => r.data),
+    enabled: !isBranchAdmin,
+  })
+
+  const { data: vehicleTypes = [] } = useQuery({
+    queryKey: ["vehicle-types"],
+    queryFn: () => api.get("/vehicles/types").then((r) => r.data),
+    enabled: !isBranchAdmin,
+  })
+
+  // Fetch bookings based on user role and applied filters
+  const { data: bookings = [], isLoading } = useQuery({
+    queryKey: isBranchAdmin
+      ? ["bookings", locationId]
+      : ["bookings-all", orgFilter, locationFilter, typeFilter],
+    queryFn: () => {
+      if (isBranchAdmin) {
+        return api.get(`/bookings/location/${locationId}`).then((r) => r.data)
+      }
+      return api
+        .get("/bookings", {
+          params: {
+            organizationId: orgFilter !== "all" ? orgFilter : undefined,
+            locationId: locationFilter !== "all" ? locationFilter : undefined,
+            vehicleTypeId: typeFilter !== "all" ? typeFilter : undefined,
+          },
+        })
+        .then((r) => r.data)
+    },
+    enabled: isBranchAdmin ? !!locationId : true,
+  })
+
+  const invalidateBookings = () => {
+    queryClient.invalidateQueries({ queryKey: ["bookings"] })
+    queryClient.invalidateQueries({ queryKey: ["bookings-all"] })
+  }
 
   const updateStatus = useMutation({
     mutationFn: ({
@@ -123,7 +200,7 @@ export default function BookingsPage() {
       rejectionReason?: string
     }) => api.patch(`/bookings/${id}/status`, { status, rejectionReason }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["bookings", locationId] })
+      invalidateBookings()
       toast.success("Status rezerwacji zaktualizowany")
       setRejectTarget(null)
       setRejectionReason("")
@@ -157,7 +234,7 @@ export default function BookingsPage() {
     return matchesStatus && matchesVehicle
   })
 
-  if (!locationId) {
+  if (isBranchAdmin && !locationId) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-muted-foreground">
@@ -173,13 +250,72 @@ export default function BookingsPage() {
         <div>
           <h1 className="text-2xl font-semibold">Rezerwacje</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {user?.managedLocation?.name}
+            {isBranchAdmin
+              ? user?.managedLocation?.name
+              : "Wszystkie rezerwacje"}
           </p>
         </div>
       </div>
 
       {/* Filtering */}
       <div className="flex items-center gap-4 flex-wrap">
+        {/* Organization Filter — SUPER_ADMIN */}
+        {isSuperAdmin && (
+          <Select
+            value={orgFilter}
+            onValueChange={(v) => {
+              setOrgFilter(v)
+              setLocationFilter("all")
+            }}
+          >
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder="Wszystkie organizacje" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Wszystkie organizacje</SelectItem>
+              {organizations.map((org: Organization) => (
+                <SelectItem key={org.id} value={org.id}>
+                  {org.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {/* Location Filter — SUPER_ADMIN / ORG_ADMIN */}
+        {!isBranchAdmin && (
+          <Select value={locationFilter} onValueChange={setLocationFilter}>
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder="Wszystkie lokalizacje" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Wszystkie lokalizacje</SelectItem>
+              {locations.map((loc: Location) => (
+                <SelectItem key={loc.id} value={loc.id}>
+                  {loc.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {/* Vehicle Type Filter — SUPER_ADMIN / ORG_ADMIN */}
+        {!isBranchAdmin && (
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Wszystkie typy" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Wszystkie typy</SelectItem>
+              {vehicleTypes.map((t: VehicleType) => (
+                <SelectItem key={t.id} value={t.id}>
+                  {t.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
         {/* Status multiselect */}
         <Popover open={statusPopoverOpen} onOpenChange={setStatusPopoverOpen}>
           <PopoverTrigger asChild>
@@ -229,13 +365,13 @@ export default function BookingsPage() {
           </Badge>
         ))}
 
-        {/* Vehicle filter */}
+        {/* Vehicle filter (model) */}
         <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
           <SelectTrigger className="w-56">
-            <SelectValue placeholder="Wszystkie pojazdy" />
+            <SelectValue placeholder="Wszystkie modele" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Wszystkie pojazdy</SelectItem>
+            <SelectItem value="all">Wszystkie modele</SelectItem>
             {vehicles.map(([id, name]) => (
               <SelectItem key={id as string} value={id as string}>
                 {name as string}
@@ -244,12 +380,14 @@ export default function BookingsPage() {
           </SelectContent>
         </Select>
       </div>
+
       {/* Main Booking Table */}
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Klient</TableHead>
             <TableHead>Pojazd</TableHead>
+            {!isBranchAdmin && <TableHead>Lokalizacja</TableHead>}
             <TableHead>Data</TableHead>
             <TableHead>Godzina</TableHead>
             <TableHead>Status</TableHead>
@@ -260,7 +398,7 @@ export default function BookingsPage() {
           {isLoading ? (
             <TableRow>
               <TableCell
-                colSpan={6}
+                colSpan={isBranchAdmin ? 6 : 7}
                 className="text-center text-muted-foreground"
               >
                 Ładowanie...
@@ -269,7 +407,7 @@ export default function BookingsPage() {
           ) : filteredBookings.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={6}
+                colSpan={isBranchAdmin ? 6 : 7}
                 className="text-center text-muted-foreground"
               >
                 Brak rezerwacji
@@ -291,6 +429,11 @@ export default function BookingsPage() {
                 <TableCell>
                   {booking.slot.locationVehicle.vehicle.name}
                 </TableCell>
+                {!isBranchAdmin && (
+                  <TableCell className="text-sm text-muted-foreground">
+                    {booking.slot.locationVehicle.location?.name}
+                  </TableCell>
+                )}
                 <TableCell>
                   {format(new Date(booking.slot.startTime), "dd.MM.yyyy", {
                     locale: pl,
@@ -441,6 +584,14 @@ export default function BookingsPage() {
                     {detailsTarget.slot.locationVehicle.vehicle.name}
                   </p>
                 </div>
+                {!isBranchAdmin && (
+                  <div>
+                    <p className="text-muted-foreground">Lokalizacja</p>
+                    <p className="font-medium">
+                      {detailsTarget.slot.locationVehicle.location?.name}
+                    </p>
+                  </div>
+                )}
                 <div>
                   <p className="text-muted-foreground">Data i godzina</p>
                   <p className="font-medium">
