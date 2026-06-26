@@ -4,12 +4,12 @@ A web application for booking motorcycle test rides, built with Next.js 15.
 
 ## Demo
 
-Application available at: **[FRONTEND_URL]**
+Application available at: **https://ride-booker.vercel.app/**
 
-Test account credentials available at: **[FRONTEND_URL]/demo**
+Test account credentials available at: **https://ride-booker.vercel.app/demo**
 
-Admin panel: **[FRONTEND_URL]/admin/login**  
-Client panel: **[FRONTEND_URL]/login**
+Admin panel: **https://ride-booker.vercel.app/admin/login**
+Client panel: **https://ride-booker.vercel.app/login**
 
 ## Tech Stack
 
@@ -32,7 +32,7 @@ Client panel: **[FRONTEND_URL]/login**
 ### 1. Clone the repository
 
 ```bash
-git clone [REPO_URL]
+git clone https://github.com/KarasJakub/Ride-Booker-App
 cd ride-booker-frontend
 ```
 

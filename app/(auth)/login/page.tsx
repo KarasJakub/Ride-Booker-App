@@ -56,7 +56,7 @@ export default function LoginPage() {
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold">Logowanie</h1>
           <p className="text-muted-foreground text-sm">
-            Panel klienta — zaloguj się aby zarezerwować jazdę próbną
+            Panel klienta - zaloguj się aby zarezerwować jazdę próbną
           </p>
         </div>
         <Form {...form}>
