@@ -5,12 +5,15 @@ import { useAuthStore } from "@/store/authStore"
 import api from "@/lib/apiClient"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AdminSidebar } from "@/components/admin/AdminSidebar"
+import { useRouter } from "next/navigation"
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const router = useRouter()
+
   useEffect(() => {
     if (useAuthStore.getState().user) return
 
@@ -20,8 +23,10 @@ export default function AdminLayout({
         const currentToken = useAuthStore.getState().accessToken
         useAuthStore.getState().setAuth(data, currentToken!)
       })
-      .catch(() => {})
-  }, [])
+      .catch(() => {
+        router.push("/admin/login")
+      })
+  }, [router])
 
   return (
     <SidebarProvider>

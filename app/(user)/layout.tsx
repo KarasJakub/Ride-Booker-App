@@ -27,8 +27,10 @@ export default function UserLayout({
         const currentToken = useAuthStore.getState().accessToken
         useAuthStore.getState().setAuth(data, currentToken!)
       })
-      .catch(() => {})
-  }, [])
+      .catch(() => {
+        router.push("/login")
+      })
+  }, [router])
 
   const handleLogout = async () => {
     try {
