@@ -14,6 +14,15 @@ const accounts = [
     icon: Shield,
   },
   {
+    role: "Organization Admin",
+    email: "organization@ridebooker.pl",
+    password: "12345678",
+    description: "Zarządzanie organizacją - lokalizacje, użytkownicy, pojazdy",
+    href: "/admin/login",
+    label: "Panel administracyjny",
+    icon: Shield,
+  },
+  {
     role: "Branch Admin",
     email: "branch@ridebooker.pl",
     password: "12345678",
