@@ -18,19 +18,32 @@ export default function UserLayout({
   const router = useRouter()
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [isChecking, setIsChecking] = useState(
+    () => !useAuthStore.getState().user
+  )
 
   useEffect(() => {
-    if (useAuthStore.getState().user) return
+    if (!isChecking) return
+
     api
       .get("/auth/me")
       .then(({ data }) => {
         const currentToken = useAuthStore.getState().accessToken
         useAuthStore.getState().setAuth(data, currentToken!)
+        setIsChecking(false)
       })
       .catch(() => {
         router.push("/login")
       })
-  }, [router])
+  }, [router, isChecking])
+
+  if (isChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-2 border-border border-t-foreground rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   const handleLogout = async () => {
     try {

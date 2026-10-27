@@ -46,7 +46,8 @@ api.interceptors.response.use(
       } catch {
         useAuthStore.getState().clearAuth()
         document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
-        window.location.href = '/login'
+        const isAdminRoute = window.location.pathname.startsWith('/admin')
+        window.location.href = isAdminRoute ? '/admin/login' : '/login'
       }
     }
 

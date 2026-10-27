@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useAuthStore } from "@/store/authStore"
 import api from "@/lib/apiClient"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
@@ -13,20 +13,30 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
+  const [isChecking, setIsChecking] = useState(true)
 
   useEffect(() => {
-    if (useAuthStore.getState().user) return
+    if (!isChecking) return
 
     api
       .get("/auth/me")
       .then(({ data }) => {
         const currentToken = useAuthStore.getState().accessToken
         useAuthStore.getState().setAuth(data, currentToken!)
+        setIsChecking(false)
       })
       .catch(() => {
         router.push("/admin/login")
       })
-  }, [router])
+  }, [router, isChecking])
+
+  if (isChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-2 border-border border-t-foreground rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <SidebarProvider>

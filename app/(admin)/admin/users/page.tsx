@@ -246,37 +246,41 @@ export default function UsersPage() {
                   {u.managedLocation?.name || u.organization?.name || "—"}
                 </TableCell>
                 <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {isSuperAdmin && u.role === "USER" && (
-                        <DropdownMenuItem onClick={() => setAssignOrgTarget(u)}>
-                          Awansuj na Org Admin
-                        </DropdownMenuItem>
-                      )}
-                      {u.role === "USER" && (
-                        <DropdownMenuItem
-                          onClick={() => setAssignBranchTarget(u)}
-                        >
-                          Awansuj na Branch Admin
-                        </DropdownMenuItem>
-                      )}
-                      {(u.role === "ORG_ADMIN" ||
-                        u.role === "BRANCH_ADMIN") && (
-                        <DropdownMenuItem
-                          onClick={() =>
-                            changeRole.mutate({ id: u.id, role: "USER" })
-                          }
-                        >
-                          Zdegraduj do Użytkownika
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  {u.role !== "SUPER_ADMIN" && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {isSuperAdmin && u.role === "USER" && (
+                          <DropdownMenuItem
+                            onClick={() => setAssignOrgTarget(u)}
+                          >
+                            Awansuj na Org Admin
+                          </DropdownMenuItem>
+                        )}
+                        {u.role === "USER" && (
+                          <DropdownMenuItem
+                            onClick={() => setAssignBranchTarget(u)}
+                          >
+                            Awansuj na Branch Admin
+                          </DropdownMenuItem>
+                        )}
+                        {(u.role === "ORG_ADMIN" ||
+                          u.role === "BRANCH_ADMIN") && (
+                          <DropdownMenuItem
+                            onClick={() =>
+                              changeRole.mutate({ id: u.id, role: "USER" })
+                            }
+                          >
+                            Zdegraduj do Użytkownika
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </TableCell>
               </TableRow>
             ))

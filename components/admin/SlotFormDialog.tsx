@@ -62,14 +62,16 @@ export default function SlotFormDialog({
       const end = new Date(editSlot.endTime)
       return {
         locationVehicleId: editSlot.locationVehicleId,
-        date: start.toISOString().split("T")[0],
+        date: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(
+          2,
+          "0"
+        )}-${String(start.getDate()).padStart(2, "0")}`,
         startHour: `${String(start.getHours()).padStart(2, "0")}:${String(
           start.getMinutes()
         ).padStart(2, "0")}`,
         endHour: `${String(end.getHours()).padStart(2, "0")}:${String(
           end.getMinutes()
         ).padStart(2, "0")}`,
-        isAvailable: editSlot.isAvailable,
       }
     }
     return {
